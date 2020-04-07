@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:weightSum="1"
+    tools:context="stoyanov.stoyan.simplebrowser.MainActivity">
+
+    <LinearLayout
+        android:id="@+id/ll_urlgo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:orientation="horizontal"
+        android:weightSum="1">
+
+        <EditText
+            android:id="@+id/et_url"
+            style="@android:style/Widget.EditText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.90"
+            android:cursorVisible="true"
+            android:ems="4"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:imeOptions="actionGo"
+            android:inputType="textNoSuggestions|textVisiblePassword"
+            android:maxLines="1" />
+
+        <ImageButton
+            android:id="@+id/btn_go"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.05"
+            android:text="GO"
+            android:textColor="#FFFFFF"
+            app:srcCompat="@drawable/next" />
+
+        <ImageButton
+            android:id="@+id/btn_go2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.05"
+            android:text="GO"
+            android:textColor="#FFFFFF"
+            app:srcCompat="@drawable/search" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
+
+    <WebView
+        android:id="@+id/wv_brow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="0.80"
+        android:visibility="visible"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="8dp"
+        >
+
+    </WebView>
+
+
+    <LinearLayout
+        android:id="@+id/ll_btns"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_weight="0"
+        android:orientation="horizontal"
+        android:weightSum="1"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="0dp">
+
+        <Button
+            android:id="@+id/bck"
+            style="@android:style/Widget.DeviceDefault.Button.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.12"
+            android:background="@drawable/back"
+            android:textColor="#000000" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"/>
+
+        <Button
+            android:id="@+id/fwd"
+            style="@android:style/Widget.DeviceDefault.Button.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.12"
+            android:background="@drawable/forward"
+            android:textColor="#000000" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"/>
+
+        <Button
+            android:id="@+id/btn_reload"
+            style="@android:style/Widget.DeviceDefault.Button.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.12"
+            android:background="@drawable/refreshedit"
+            android:textColor="#000000" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"/>
+
+        <Button
+            android:id="@+id/btn_stop"
+            style="@android:style/Widget.DeviceDefault.Button.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.12"
+            android:background="@drawable/error"
+            android:textColor="#000000" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"/>
+
+        <Button
+            android:id="@+id/btn_settings"
+            style="@android:style/Widget.DeviceDefault.Button.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"
+            android:background="@drawable/trash"
+            android:onClick="stngs"
+            android:textColor="#000000" />
+
+    </LinearLayout>
+
+</LinearLayout>
