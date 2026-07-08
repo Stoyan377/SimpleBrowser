@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#ffffff</color>
-    <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
+    <!-- Material Design 3 Color Palette -->
+    <!-- Primary Colors -->
+    <color name="colorPrimary">#006DAD</color>
+    <color name="colorPrimaryDark">#004B7A</color>
+    <color name="colorAccent">#0089D8</color>
+    
+    <!-- Material 3 Palette -->
+    <color name="primary">#006DAD</color>
+    <color name="primary_light">#0089D8</color>
+    <color name="primary_dark">#004B7A</color>
+    <color name="secondary">#0F7F8C</color>
+    <color name="tertiary">#7A5930</color>
+    
+    <!-- Surface Colors -->
+    <color name="background">#FFFBFE</color>
+    <color name="surface">#FFFBFE</color>
+    <color name="surface_variant">#E8DEE8</color>
+    <color name="error">#B3261E</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#1C1B1F</color>
+    <color name="text_secondary">#49454F</color>
+    <color name="text_tertiary">#79747E</color>
+    <color name="text_light">#FFFFFF</color>
+    
+    <!-- Component Colors -->
+    <color name="button_background">#006DAD</color>
+    <color name="icon_tint">#FFFFFF</color>
 </resources>
