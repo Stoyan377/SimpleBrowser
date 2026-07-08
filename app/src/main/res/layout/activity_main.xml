@@ -1,151 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:weightSum="1"
+    android:background="@color/background"
     tools:context="stoyanov.stoyan.simplebrowser.MainActivity">
 
+    <!-- Status Bar Background -->
+    <View
+        android:id="@+id/status_bar"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@color/surface"
+        app:layout_constraintHeight_percent="0.04"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Modern URL Bar Container -->
     <LinearLayout
         android:id="@+id/ll_urlgo"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:elevation="4dp"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:orientation="horizontal"
-        android:weightSum="1">
+        android:padding="12dp"
+        android:weightSum="1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/status_bar">
 
+        <!-- URL Input -->
         <EditText
             android:id="@+id/et_url"
-            style="@android:style/Widget.EditText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.90"
+            style="@style/URLInputStyle"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="0.75"
             android:cursorVisible="true"
-            android:ems="4"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
+            android:fontFamily="sans-serif"
+            android:hint="@string/enter_url"
             android:imeOptions="actionGo"
             android:inputType="textNoSuggestions|textVisiblePassword"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:textColorHint="@color/text_tertiary"
+            tools:ignore="Autofill" />
 
+        <!-- Go Button -->
         <ImageButton
             android:id="@+id/btn_go"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.05"
-            android:text="GO"
-            android:textColor="#FFFFFF"
+            android:layout_width="40dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/button_background"
+            android:contentDescription="@string/go"
+            android:scaleType="centerInside"
+            android:tint="@color/text_light"
             app:srcCompat="@drawable/next" />
 
+        <!-- Search Button -->
         <ImageButton
             android:id="@+id/btn_go2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.05"
-            android:text="GO"
-            android:textColor="#FFFFFF"
+            android:layout_width="40dp"
+            android:layout_height="48dp"
+            android:background="@drawable/button_background"
+            android:contentDescription="@string/search"
+            android:scaleType="centerInside"
+            android:tint="@color/text_light"
             app:srcCompat="@drawable/search" />
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
     </LinearLayout>
 
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="0dp"
+        android:layout_height="4dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ll_urlgo" />
 
+    <!-- WebView -->
     <WebView
         android:id="@+id/wv_brow"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="0.80"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:visibility="visible"
-        tools:layout_editor_absoluteX="8dp"
-        tools:layout_editor_absoluteY="8dp"
-        >
+        app:layout_constraintBottom_toTopOf="@id/bottom_app_bar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/progressBar" />
 
-    </WebView>
+    <!-- Modern Bottom App Bar -->
+    <com.google.android.material.bottomappbar.BottomAppBar
+        android:id="@+id/bottom_app_bar"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:background="@color/surface"
+        app:elevation="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:menu="@menu/bottom_nav_menu"
+        app:navigationIcon="@drawable/menu_icon" />
 
-
-    <LinearLayout
-        android:id="@+id/ll_btns"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_weight="0"
-        android:orientation="horizontal"
-        android:weightSum="1"
-        tools:layout_editor_absoluteX="8dp"
-        tools:layout_editor_absoluteY="0dp">
-
-        <Button
-            android:id="@+id/bck"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.12"
-            android:background="@drawable/back"
-            android:textColor="#000000" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.10"/>
-
-        <Button
-            android:id="@+id/fwd"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.12"
-            android:background="@drawable/forward"
-            android:textColor="#000000" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.10"/>
-
-        <Button
-            android:id="@+id/btn_reload"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.12"
-            android:background="@drawable/refreshedit"
-            android:textColor="#000000" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.10"/>
-
-        <Button
-            android:id="@+id/btn_stop"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.12"
-            android:background="@drawable/error"
-            android:textColor="#000000" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.10"/>
-
-        <Button
-            android:id="@+id/btn_settings"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.10"
-            android:background="@drawable/trash"
-            android:onClick="stngs"
-            android:textColor="#000000" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

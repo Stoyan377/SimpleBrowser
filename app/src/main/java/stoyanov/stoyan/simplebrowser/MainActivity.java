@@ -4,21 +4,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.hardware.input.InputManager;
 import android.os.Handler;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.material.bottomappbar.BottomAppBar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,12 +28,8 @@ public class MainActivity extends AppCompatActivity {
     EditText urledit;
     ImageButton go;
     ImageButton search;
-    Button forward;
-    Button back;
-    Button reload;
-    Button stop;
-    Button stngs;
     ProgressBar progressBar;
+    BottomAppBar bottomAppBar;
 
 
     @Override
@@ -45,11 +43,9 @@ public class MainActivity extends AppCompatActivity {
         urledit = (EditText)findViewById(R.id.et_url);
         go = (ImageButton)findViewById(R.id.btn_go);
         search = (ImageButton)findViewById(R.id.btn_go2);
-        back = (Button)findViewById(R.id.bck);
-        forward = (Button)findViewById(R.id.fwd);
-        reload = (Button)findViewById(R.id.btn_reload);
-        stop = (Button)findViewById(R.id.btn_stop);
-        stngs = (Button)findViewById(R.id.btn_settings);
+        bottomAppBar = findViewById(R.id.bottom_app_bar);
+        
+        setSupportActionBar(bottomAppBar);
 
         brow.setWebViewClient(new ourViewClient());
         brow.setWebChromeClient(new WebChromeClient(){
@@ -92,70 +88,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(brow.canGoBack())
-                    brow.goBack();
-            }
-        });
-
-        forward.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(brow.canGoForward())
-                    brow.goForward();
-            }
-        });
-
-        reload.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                brow.reload();
-            }
-        });
-
-        stop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                brow.stopLoading();
-            }
-        });
-
-
-        stngs.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                brow.clearCache(true);
-                brow.clearHistory();
-                brow.clearMatches();
-                brow.clearFormData();
-            }
-        });
-
-        urledit.setOnEditorActionListener(new TextView.OnEditorActionListener(){
-
-
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                boolean handled = false;
-                if (actionId == EditorInfo.IME_ACTION_GO){
-                    String editextvalue = urledit.getText().toString();
-                    if(!editextvalue.startsWith("http://"))
-                        editextvalue = "http://" + editextvalue;
-                    String url = editextvalue;
-                    urledit.clearFocus();
-                    brow.loadUrl(url);
-
-                    InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(urledit.getWindowToken(),0);
-                    handled = true;
-                }
-                return handled;
-            }
-        });
-
         search.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -176,6 +108,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.bottom_nav_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int itemId = item.getItemId();
+        
+        if (itemId == R.id.action_back) {
+            if(brow.canGoBack())
+                brow.goBack();
+            return true;
+        } else if (itemId == R.id.action_forward) {
+            if(brow.canGoForward())
+                brow.goForward();
+            return true;
+        } else if (itemId == R.id.action_reload) {
+            brow.reload();
+            return true;
+        } else if (itemId == R.id.action_stop) {
+            brow.stopLoading();
+            return true;
+        } else if (itemId == R.id.action_settings) {
+            brow.clearCache(true);
+            brow.clearHistory();
+            brow.clearMatches();
+            brow.clearFormData();
+            Toast.makeText(this, "Cache cleared", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public boolean onKeyDown( int keyCode, KeyEvent event )  {
         if ( keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
             if(brow.canGoBack())
@@ -186,10 +154,6 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onKeyDown( keyCode, event );
     }
-
-
-
-
 
 }
 

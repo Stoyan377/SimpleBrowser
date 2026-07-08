@@ -1,6 +1,15 @@
 <resources>
     <string name="app_name">Simple Browser</string>
     <string name="title_activity_settings">Settings</string>
+    <string name="enter_url">Enter URL</string>
+    <string name="go">Go</string>
+    <string name="search">Search</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="reload">Reload</string>
+    <string name="stop">Stop</string>
+    <string name="settings">Settings</string>
+    <string name="menu">Menu</string>
 
     <!-- Strings related to Settings -->
 
