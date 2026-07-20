@@ -4,32 +4,32 @@
 
     <item
         android:id="@+id/action_back"
-        android:icon="@drawable/back"
+        android:icon="@drawable/ic_arrow_back"
         android:title="@string/back"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/action_forward"
-        android:icon="@drawable/forward"
+        android:icon="@drawable/ic_arrow_forward"
         android:title="@string/forward"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/action_reload"
-        android:icon="@drawable/refreshedit"
+        android:icon="@drawable/ic_refresh"
         android:title="@string/reload"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/action_stop"
-        android:icon="@drawable/error"
+        android:icon="@drawable/ic_close"
         android:title="@string/stop"
         app:showAsAction="always" />
 
     <item
         android:id="@+id/action_settings"
-        android:icon="@drawable/trash"
-        android:title="@string/settings"
+        android:icon="@drawable/ic_delete"
+        android:title="@string/clear_cache"
         app:showAsAction="always" />
 
 </menu>

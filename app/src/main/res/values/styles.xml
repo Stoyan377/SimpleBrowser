@@ -8,12 +8,13 @@
         <item name="colorAccent">@color/colorAccent</item>
         <item name="android:windowBackground">@color/background</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/surface</item>
     </style>
 
     <!-- URL Input Style -->
     <style name="URLInputStyle">
-        <item name="android:textColorHint">@color/text_tertiary</item>
-        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/url_bar_hint</item>
+        <item name="android:textColor">@color/url_bar_text</item>
         <item name="android:background">@drawable/url_input_background</item>
         <item name="android:paddingLeft">16dp</item>
         <item name="android:paddingRight">16dp</item>
@@ -27,6 +28,11 @@
         <item name="android:textColor">@color/text_light</item>
         <item name="backgroundTint">@color/primary</item>
         <item name="cornerRadius">8dp</item>
+    </style>
+
+    <!-- Bottom App Bar Style -->
+    <style name="BottomBarStyle">
+        <item name="android:background">@color/bottom_bar_surface</item>
     </style>
 
 </resources>

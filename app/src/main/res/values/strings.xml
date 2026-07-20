@@ -10,6 +10,7 @@
     <string name="stop">Stop</string>
     <string name="settings">Settings</string>
     <string name="menu">Menu</string>
+    <string name="clear_cache">Clear Cache</string>
 
     <!-- Strings related to Settings -->
 

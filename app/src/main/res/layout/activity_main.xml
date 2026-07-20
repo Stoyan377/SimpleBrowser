@@ -7,105 +7,113 @@
     android:background="@color/background"
     tools:context="stoyanov.stoyan.simplebrowser.MainActivity">
 
-    <!-- Status Bar Background -->
-    <View
-        android:id="@+id/status_bar"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:background="@color/surface"
-        app:layout_constraintHeight_percent="0.04"
-        app:layout_constraintTop_toTopOf="parent" />
-
     <!-- Modern URL Bar Container -->
     <LinearLayout
         android:id="@+id/ll_urlgo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@color/surface"
-        android:elevation="4dp"
+        android:elevation="2dp"
         android:focusable="true"
         android:focusableInTouchMode="true"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="12dp"
-        android:weightSum="1"
+        android:paddingStart="12dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/status_bar">
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- URL Input -->
+        <!-- URL Input — uses layout_weight to fill remaining space -->
         <EditText
             android:id="@+id/et_url"
             style="@style/URLInputStyle"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="44dp"
             android:layout_marginEnd="8dp"
-            android:layout_weight="0.75"
+            android:layout_weight="1"
             android:cursorVisible="true"
             android:fontFamily="sans-serif"
             android:hint="@string/enter_url"
             android:imeOptions="actionGo"
-            android:inputType="textNoSuggestions|textVisiblePassword"
+            android:inputType="textUri"
             android:maxLines="1"
-            android:textColorHint="@color/text_tertiary"
+            android:singleLine="true"
+            android:textColorHint="@color/url_bar_hint"
+            android:textSize="14sp"
             tools:ignore="Autofill" />
 
-        <!-- Go Button -->
+        <!-- Go Button — fixed size, scales with dp -->
         <ImageButton
             android:id="@+id/btn_go"
             android:layout_width="40dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="4dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
             android:background="@drawable/button_background"
             android:contentDescription="@string/go"
             android:scaleType="centerInside"
-            android:tint="@color/text_light"
-            app:srcCompat="@drawable/next" />
+            android:padding="8dp"
+            app:srcCompat="@drawable/ic_send" />
 
-        <!-- Search Button -->
+        <!-- Search Button — fixed size, scales with dp -->
         <ImageButton
             android:id="@+id/btn_go2"
             android:layout_width="40dp"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:background="@drawable/button_background"
             android:contentDescription="@string/search"
             android:scaleType="centerInside"
-            android:tint="@color/text_light"
-            app:srcCompat="@drawable/search" />
+            android:padding="8dp"
+            app:srcCompat="@drawable/ic_search" />
 
     </LinearLayout>
 
     <!-- Progress Bar -->
     <ProgressBar
         android:id="@+id/progressBar"
+        style="@android:style/Widget.ProgressBar.Horizontal"
         android:layout_width="0dp"
-        android:layout_height="4dp"
+        android:layout_height="3dp"
+        android:progressDrawable="@color/progress_bar"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ll_urlgo" />
 
-    <!-- WebView -->
+    <!-- WebView — fills all remaining space between URL bar and bottom bar -->
     <WebView
         android:id="@+id/wv_brow"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="visible"
-        app:layout_constraintBottom_toTopOf="@id/bottom_app_bar"
+        app:layout_constraintBottom_toTopOf="@id/bottom_divider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progressBar" />
 
-    <!-- Modern Bottom App Bar -->
+    <!-- Subtle divider line above the bottom bar -->
+    <View
+        android:id="@+id/bottom_divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="@color/bottom_bar_divider"
+        app:layout_constraintBottom_toTopOf="@id/bottom_app_bar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Modern Bottom App Bar — constrained to bottom, scales with screen width -->
     <com.google.android.material.bottomappbar.BottomAppBar
         android:id="@+id/bottom_app_bar"
         android:layout_width="0dp"
-        android:layout_height="56dp"
-        android:background="@color/surface"
-        app:elevation="8dp"
+        android:layout_height="52dp"
+        android:background="@color/bottom_bar_surface"
+        app:backgroundTint="@color/bottom_bar_surface"
+        app:elevation="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:menu="@menu/bottom_nav_menu"
-        app:navigationIcon="@drawable/menu_icon" />
+        app:menu="@menu/bottom_nav_menu" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
