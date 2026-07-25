@@ -205,6 +205,9 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         // Start foreground service to keep media playing when screen is off
         startBackgroundPlayback();
+        // Re-activate WebView after super.onPause() paused it
+        // This is the key to keeping audio/video playing
+        brow.onResume();
     }
 
     @Override
