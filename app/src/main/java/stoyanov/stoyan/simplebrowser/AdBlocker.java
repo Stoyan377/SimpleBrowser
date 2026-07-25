@@ -16,7 +16,7 @@ import java.util.Set;
  * Comprehensive ad blocker that loads a large blocklist from assets,
  * blocks network requests to ad/tracking domains, and provides
  * JavaScript injection scripts for YouTube ad skipping,
- * element hiding, and background playback support.
+ * element hiding, and robust background playback support.
  */
 public class AdBlocker {
 
@@ -25,7 +25,6 @@ public class AdBlocker {
 
     /**
      * Initialize the ad blocker by loading the hosts list from assets.
-     * Call this once in Application.onCreate() or MainActivity.onCreate().
      */
     public static void init(Context context) {
         if (initialized) return;
@@ -78,7 +77,7 @@ public class AdBlocker {
             // Direct match
             if (AD_HOSTS.contains(host)) return true;
 
-            // Check parent domains (e.g. "cdn.taboola.com" matches "taboola.com")
+            // Check parent domains
             int dotIndex = host.indexOf('.');
             while (dotIndex != -1) {
                 String parent = host.substring(dotIndex + 1);
@@ -107,25 +106,26 @@ public class AdBlocker {
 
     /**
      * JavaScript to bypass Page Visibility API and keep media playing in background.
-     * Overrides all visibility-related properties, event listeners, and handlers.
-     * Periodically force-resumes paused video as a safety net.
+     * Respects intentional user pauses while preventing YouTube background auto-pause.
      */
     public static String getBackgroundPlaybackScript() {
         return "(function() {" +
             "if (window.__sbBgPlayback) return;" +
             "window.__sbBgPlayback = true;" +
             "try {" +
-            // Override document.hidden and visibilityState properties
+            "  window.__sbUserPaused = false;" +
+            "  window.__sbLastClickTime = 0;" +
+
+            // 1. Override document visibility properties
             "  Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});" +
             "  Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});" +
             "  Object.defineProperty(document, 'webkitHidden', {get: function() { return false; }, configurable: true});" +
             "  Object.defineProperty(document, 'webkitVisibilityState', {get: function() { return 'visible'; }, configurable: true});" +
-            // Override document.hasFocus()
             "  Document.prototype.hasFocus = function() { return true; };" +
-            // Block onvisibilitychange property setter
+
+            // 2. Block visibilitychange and blur event setters & listeners
             "  Object.defineProperty(document, 'onvisibilitychange', {get: function() { return null; }, set: function() {}, configurable: true});" +
             "  Object.defineProperty(document, 'onwebkitvisibilitychange', {get: function() { return null; }, set: function() {}, configurable: true});" +
-            // Block visibilitychange, blur, pagehide, and freeze event listeners
             "  var origAEL = EventTarget.prototype.addEventListener;" +
             "  EventTarget.prototype.addEventListener = function(type, fn, opt) {" +
             "    if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || " +
@@ -135,19 +135,52 @@ public class AdBlocker {
             "    if (this === window && type === 'blur') { return; }" +
             "    return origAEL.call(this, type, fn, opt);" +
             "  };" +
-            // Block window.onblur and window.onfocus setters
             "  Object.defineProperty(window, 'onblur', {get: function() { return null; }, set: function() {}, configurable: true});" +
-            // Periodically resume paused video (every 1 second)
+
+            // 3. Track user click interactions to detect intentional pauses vs background pauses
+            "  var recordUserClick = function(e) {" +
+            "    window.__sbLastClickTime = Date.now();" +
+            "  };" +
+            "  document.addEventListener('click', recordUserClick, true);" +
+            "  document.addEventListener('touchstart', recordUserClick, true);" +
+
+            // 4. Override HTMLMediaElement.prototype.pause to ignore system/background pauses when user didn't pause
+            "  var origPause = HTMLMediaElement.prototype.pause;" +
+            "  HTMLMediaElement.prototype.pause = function() {" +
+            "    var timeSinceClick = Date.now() - (window.__sbLastClickTime || 0);" +
+            // If user clicked within 1000ms, consider it an intentional user pause
+            "    if (timeSinceClick < 1000) {" +
+            "      window.__sbUserPaused = true;" +
+            "      return origPause.apply(this, arguments);" +
+            "    }" +
+            // If user explicitly paused previously, allow pause
+            "    if (window.__sbUserPaused) {" +
+            "      return origPause.apply(this, arguments);" +
+            "    }" +
+            // Otherwise, pause was invoked by background/visibility/idle handler — ignore it!
+            "    return;" +
+            "  };" +
+
+            // 5. Track play events to reset userPaused flag
+            "  var origPlay = HTMLMediaElement.prototype.play;" +
+            "  HTMLMediaElement.prototype.play = function() {" +
+            "    var timeSinceClick = Date.now() - (window.__sbLastClickTime || 0);" +
+            "    if (timeSinceClick < 1000 || !window.__sbUserPaused) {" +
+            "      window.__sbUserPaused = false;" +
+            "    }" +
+            "    return origPlay.apply(this, arguments);" +
+            "  };" +
+
+            // 6. Safety check: if video is paused but user did NOT pause it, force resume
             "  setInterval(function() {" +
             "    try {" +
-            "      Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});" +
-            "      Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});" +
             "      var v = document.querySelector('video');" +
-            "      if (v && v.paused && !v.ended && v.readyState >= 2 && v.currentTime > 0) {" +
-            "        v.play().catch(function(){});" +
+            "      if (v && v.paused && !v.ended && !window.__sbUserPaused && v.readyState >= 2 && v.currentTime > 0) {" +
+            "        origPlay.call(v).catch(function(){});" +
             "      }" +
             "    } catch(e) {}" +
             "  }, 1000);" +
+
             "} catch(e) {}" +
             "})()";
     }
@@ -181,51 +214,18 @@ public class AdBlocker {
             "  var vid = document.querySelector('video');" +
 
             "  if(adOn && vid){" +
-            // Mark that ad was playing
             "    wasAd = true;" +
-            // Mute and speed up the ad at 8x (not 16x to avoid breaking player)
             "    vid.muted = true;" +
             "    if(vid.playbackRate < 5) vid.playbackRate = 8;" +
             "  } else if(wasAd && vid){" +
-            // Ad just ended — restore and force-play main content
             "    wasAd = false;" +
             "    vid.playbackRate = 1;" +
             "    vid.muted = false;" +
-            "    if(vid.paused){" +
+            "    if(vid.paused && !window.__sbUserPaused){" +
             "      vid.play().catch(function(){});" +
-            // Retry play after short delay in case player needs time to load
-            "      setTimeout(function(){" +
-            "        if(vid.paused && !vid.ended) vid.play().catch(function(){});" +
-            "      }, 500);" +
-            "      setTimeout(function(){" +
-            "        if(vid.paused && !vid.ended) vid.play().catch(function(){});" +
-            "      }, 1500);" +
             "    }" +
             "  }" +
             "}" +
-
-            // MutationObserver: watch for ad-showing class removal on the player
-            "try{" +
-            "  var player = document.querySelector('.html5-video-player, #movie_player');" +
-            "  if(player && !window.__sbAdObserver){" +
-            "    window.__sbAdObserver = new MutationObserver(function(mutations){" +
-            "      mutations.forEach(function(m){" +
-            "        if(m.attributeName === 'class'){" +
-            "          var el = m.target;" +
-            "          if(el.className && !el.className.includes('ad-showing') && !el.className.includes('ad-interrupting')){" +
-            "            var v = el.querySelector('video');" +
-            "            if(v){" +
-            "              v.playbackRate = 1;" +
-            "              v.muted = false;" +
-            "              if(v.paused) v.play().catch(function(){});" +
-            "            }" +
-            "          }" +
-            "        }" +
-            "      });" +
-            "    });" +
-            "    window.__sbAdObserver.observe(player, {attributes: true, attributeFilter: ['class']});" +
-            "  }" +
-            "}catch(e){}" +
 
             // --- CSS Element Hiding (Ads + Cookie/Consent Banners) ---
             "function hideEls(){" +
@@ -295,7 +295,6 @@ public class AdBlocker {
             "if(!window.__sbAdInterval){" +
             "  window.__sbAdInterval = setInterval(function(){skipYTAds();}, 500);" +
             "}" +
-            // Re-inject CSS after dynamic page changes (SPA navigation)
             "new MutationObserver(function(){hideEls();}).observe(document.body||document.documentElement,{childList:true,subtree:true});" +
             "})()";
     }

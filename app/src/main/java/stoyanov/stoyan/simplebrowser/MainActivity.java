@@ -204,16 +204,15 @@ public class MainActivity extends AppCompatActivity {
     // --- Background Playback Lifecycle ---
 
     /**
-     * JavaScript snippet to force-resume video playback from Java side.
-     * This runs after Android dispatches the visibilitychange event,
-     * re-overriding visibility state and resuming any paused video.
+     * JavaScript snippet to force-resume video playback from Java side when screen locks/backgrounds.
+     * Respects intentional user pauses (checks !window.__sbUserPaused).
      */
     private static final String JS_FORCE_RESUME =
         "try {" +
         "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
         "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
         "  var v = document.querySelector('video');" +
-        "  if (v && v.paused && !v.ended) { v.play().catch(function(){}); }" +
+        "  if (v && v.paused && !v.ended && !window.__sbUserPaused) { v.play().catch(function(){}); }" +
         "} catch(e) {}";
 
     @Override
