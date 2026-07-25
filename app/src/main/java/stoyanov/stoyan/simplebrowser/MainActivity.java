@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
-        // Set up WebViewClient with ad-blocking
+        // Set up WebViewClient with ad-blocking and background playback visibility patch
         webViewClient = new ourViewClient();
         webViewClient.setAdBlockEnabled(adBlockEnabled);
         brow.setWebViewClient(webViewClient);
@@ -166,9 +166,6 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Smart URL loading: detects whether input is a URL or a search query.
-     * - If it starts with http:// or https://, load directly
-     * - If it contains a dot and no spaces (e.g. "google.com"), treat as URL with https://
-     * - Otherwise, treat as a Google search query
      */
     private void loadUrlFromInput() {
         String input = urledit.getText().toString().trim();
@@ -176,13 +173,10 @@ public class MainActivity extends AppCompatActivity {
 
         String url;
         if (input.startsWith("http://") || input.startsWith("https://")) {
-            // Already has a scheme
             url = input;
         } else if (input.contains(".") && !input.contains(" ")) {
-            // Looks like a URL (e.g. "google.com", "en.wikipedia.org")
             url = "https://" + input;
         } else {
-            // Treat as a search query
             url = SEARCH_URL + input;
         }
 
@@ -203,27 +197,36 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        // Start foreground service to keep media playing when screen is off
         startBackgroundPlayback();
-        // Re-activate WebView after super.onPause() paused it
-        // This is the key to keeping audio/video playing
-        brow.onResume();
+        if (brow != null) {
+            brow.onResume(); // Resume WebView JS/media execution after super.onPause()
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        startBackgroundPlayback();
+        if (brow != null) {
+            brow.onResume(); // Prevent WebView from stopping playback when screen turns completely off
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Stop the foreground service when app returns to foreground
-        stopBackgroundPlayback();
-        // Ensure WebView is active
-        brow.onResume();
+        if (brow != null) {
+            brow.onResume();
+        }
     }
 
     @Override
     protected void onDestroy() {
         stopBackgroundPlayback();
-        brow.onPause();
-        brow.destroy();
+        if (brow != null) {
+            brow.onPause();
+            brow.destroy();
+        }
         super.onDestroy();
     }
 

@@ -10,14 +10,14 @@ import java.util.Set;
 
 /**
  * Ad blocker that blocks known ad-serving domains and provides
- * JavaScript injection scripts to hide/skip ads on YouTube and other sites.
+ * JavaScript injection scripts to hide/skip ads on YouTube and other sites smoothly.
  */
 public class AdBlocker {
 
     private static final Set<String> AD_HOSTS = new HashSet<>();
 
     static {
-        // Google Ads
+        // Google Ads & AdSense
         AD_HOSTS.add("pagead2.googlesyndication.com");
         AD_HOSTS.add("googleads.g.doubleclick.net");
         AD_HOSTS.add("adservice.google.com");
@@ -34,13 +34,6 @@ public class AdBlocker {
         AD_HOSTS.add("www.google-analytics.com");
         AD_HOSTS.add("ssl.google-analytics.com");
         AD_HOSTS.add("partner.googleadservices.com");
-        AD_HOSTS.add("redirector.googlevideo.com");
-
-        // YouTube ad-related
-        AD_HOSTS.add("yt3.ggpht.com");
-        AD_HOSTS.add("www.youtube.com/api/stats/ads");
-        AD_HOSTS.add("www.youtube.com/pagead");
-        AD_HOSTS.add("manifest.googlevideo.com");
 
         // Facebook / Meta
         AD_HOSTS.add("an.facebook.com");
@@ -135,7 +128,7 @@ public class AdBlocker {
         AD_HOSTS.add("teads.tv");
         AD_HOSTS.add("spotxchange.com");
 
-        // Eastern European / regional ad networks
+        // Regional / EU ad networks
         AD_HOSTS.add("adfox.ru");
         AD_HOSTS.add("adhigh.net");
         AD_HOSTS.add("admixer.net");
@@ -147,27 +140,27 @@ public class AdBlocker {
         AD_HOSTS.add("mixadvert.com");
         AD_HOSTS.add("begun.ru");
 
-        // Gambling / betting ads (common in BG/EU)
+        // Gambling / betting ads
         AD_HOSTS.add("betgenius.com");
         AD_HOSTS.add("bettingexpert.com");
         AD_HOSTS.add("oddsshark.com");
-
-        // Cookie consent / GDPR walls (optional blocking)
-        AD_HOSTS.add("consent.google.com");
-        AD_HOSTS.add("consent.youtube.com");
     }
 
     /**
      * Checks if the given URL belongs to a known ad-serving domain.
+     * Note: NEVER block googlevideo.com as YouTube relies on it for real video streams.
      */
     public static boolean isAd(String url) {
         if (TextUtils.isEmpty(url)) return false;
 
         try {
-            // Quick path-based checks for YouTube ad URLs
-            if (url.contains("/pagead/") || url.contains("/ads/") ||
-                url.contains("get_midroll") || url.contains("ad_data") ||
-                url.contains("/api/stats/ads") || url.contains("doubleclick.net")) {
+            // Do NOT block googlevideo.com streaming URLs
+            if (url.contains("googlevideo.com")) {
+                return false;
+            }
+
+            // Quick path-based checks for explicit ad URLs
+            if (url.contains("/pagead/") || url.contains("/api/stats/ads") || url.contains("doubleclick.net")) {
                 return true;
             }
 
@@ -177,7 +170,6 @@ public class AdBlocker {
 
             host = host.toLowerCase();
 
-            // Check exact match and parent domain match
             for (String adHost : AD_HOSTS) {
                 if (host.equals(adHost) || host.endsWith("." + adHost)) {
                     return true;
@@ -199,31 +191,65 @@ public class AdBlocker {
     }
 
     /**
-     * Returns JavaScript code to inject into pages for enhanced ad-blocking.
-     * Handles YouTube pre-roll/mid-roll ad skipping and general ad element hiding.
+     * Returns JavaScript code to bypass Page Visibility API so YouTube / audio continues playing in background.
+     */
+    public static String getBackgroundPlaybackScript() {
+        return "(function() {" +
+            "  try {" +
+            "    Object.defineProperty(document, 'hidden', {get: function() { return false; }, configurable: true});" +
+            "    Object.defineProperty(document, 'visibilityState', {get: function() { return 'visible'; }, configurable: true});" +
+            "    Object.defineProperty(document, 'webkitVisibilityState', {get: function() { return 'visible'; }, configurable: true});" +
+            "    var origAEL = EventTarget.prototype.addEventListener;" +
+            "    EventTarget.prototype.addEventListener = function(type, listener, options) {" +
+            "      if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || type === 'visibility-change') {" +
+            "        return;" +
+            "      }" +
+            "      return origAEL.apply(this, arguments);" +
+            "    };" +
+            "  } catch(e) {}" +
+            "})();";
+    }
+
+    /**
+     * Returns JavaScript code for clean YouTube ad skipping and general CSS ad blocking.
      */
     public static String getAdBlockScript() {
-        return "javascript:(function(){" +
-            // --- YouTube Ad Skipper ---
+        return "(function(){" +
+            // --- YouTube Ad Auto-Skipper ---
             "function skipYouTubeAds(){" +
-            // Click the skip button if available
-            "  var skipBtn=document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, [class*=\"skip-button\"]');" +
-            "  if(skipBtn){skipBtn.click();}" +
-            // Close overlay ads
-            "  var closeBtn=document.querySelector('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
-            "  if(closeBtn){closeBtn.click();}" +
-            // Speed through unskippable video ads
-            "  var adVid=document.querySelector('.ad-showing video, .ad-interrupting video');" +
-            "  if(adVid){adVid.playbackRate=16;adVid.currentTime=adVid.duration||999;}" +
-            // Hide ad containers
-            "  var adEls=document.querySelectorAll('.ytp-ad-module, .ytp-ad-overlay-container, .ytp-ad-text-overlay, .ytp-ad-player-overlay, .ytp-ad-image-overlay, #player-ads, ytd-promoted-sparkles-web-renderer, ytd-display-ad-renderer, ytd-promoted-video-renderer, ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-banner-promo-renderer, .ytd-mealbar-promo-renderer, tp-yt-paper-dialog.ytd-popup-container, #masthead-ad, .video-ads, .ytp-ad-skip-button-slot');" +
-            "  for(var i=0;i<adEls.length;i++){adEls[i].style.display='none';}" +
+            // 1. Click skip button if present
+            "  var skipButtons = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, [class*=\"skip-button\"], button.ytp-ad-skip-button-modern');" +
+            "  for(var i = 0; i < skipButtons.length; i++){" +
+            "    try { skipButtons[i].click(); } catch(e){}" +
+            "  }" +
+            // 2. Close overlay/banner ad close buttons
+            "  var closeButtons = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container, .ytp-ad-text-overlay .ytp-ad-close-button');" +
+            "  for(var j = 0; j < closeButtons.length; j++){" +
+            "    try { closeButtons[j].click(); } catch(e){}" +
+            "  }" +
+            // 3. For video ads (.ad-showing / .ad-interrupting), speed up to 16x and mute without setting currentTime=duration (which breaks playback)
+            "  var adContainer = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-self-ad-banner');" +
+            "  var videoEl = document.querySelector('video');" +
+            "  if (adContainer && videoEl) {" +
+            "    videoEl.muted = true;" +
+            "    videoEl.playbackRate = 16.0;" +
+            "  } else if (videoEl && videoEl.playbackRate === 16.0) {" +
+            "    videoEl.playbackRate = 1.0;" +
+            "    videoEl.muted = false;" +
+            "  }" +
             "}" +
-            // --- General Ad Hiding ---
+            // --- CSS Ad Hiding ---
             "function hideGeneralAds(){" +
-            "  var style=document.createElement('style');" +
-            "  style.textContent='" +
-            // Common ad container selectors
+            "  if (document.getElementById('sb-adblock-styles')) return;" +
+            "  var style = document.createElement('style');" +
+            "  style.id = 'sb-adblock-styles';" +
+            "  style.textContent = '" +
+            // YouTube ad elements
+            ".ytp-ad-module, .ytp-ad-overlay-container, .ytp-ad-text-overlay, .ytp-ad-player-overlay, " +
+            ".ytp-ad-image-overlay, #player-ads, ytd-promoted-sparkles-web-renderer, ytd-display-ad-renderer, " +
+            "ytd-promoted-video-renderer, ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, " +
+            "ytd-banner-promo-renderer, .ytd-mealbar-promo-renderer, #masthead-ad, .video-ads, " +
+            // General web ad container selectors
             "[id*=\"google_ads\"], [id*=\"ad-container\"], [id*=\"ad_container\"], " +
             "[class*=\"ad-banner\"], [class*=\"ad_banner\"], [class*=\"adsbygoogle\"], " +
             "ins.adsbygoogle, [id*=\"sponsored\"], [class*=\"sponsored-content\"], " +
@@ -232,25 +258,18 @@ public class AdBlocker {
             "iframe[src*=\"amazon-adsystem\"], iframe[src*=\"taboola\"], " +
             "[class*=\"ad-slot\"], [id*=\"div-gpt-ad\"], " +
             "[class*=\"advertisement\"], [id*=\"advertisement\"], " +
-            // Taboola / Outbrain / MGID widgets
             "[id*=\"taboola\"], [class*=\"taboola\"], " +
             "[id*=\"outbrain\"], [class*=\"outbrain\"], " +
             "[id*=\"mgid\"], [class*=\"mgid\"], " +
             "[class*=\"zergnet\"], [id*=\"zergnet\"], " +
-            // Overlay / popup ads
             "[class*=\"popup-ad\"], [class*=\"modal-ad\"], " +
-            "[class*=\"interstitial\"], [id*=\"interstitial\"], " +
-            // Cookie/consent walls
-            "[class*=\"cookie-banner\"], [class*=\"consent-banner\"], " +
-            "[id*=\"cookie-notice\"], [class*=\"cookie-notice\"] " +
-            "{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;}';" +
-            "  if(document.head){document.head.appendChild(style);}" +
+            "[class*=\"interstitial\"], [id*=\"interstitial\"] " +
+            "{ display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }';" +
+            "  if (document.head) { document.head.appendChild(style); }" +
             "}" +
-            // Run immediately
             "hideGeneralAds();" +
             "skipYouTubeAds();" +
-            // Keep checking for YouTube ads every 500ms
-            "setInterval(skipYouTubeAds,500);" +
+            "if (!window.sbAdInterval) { window.sbAdInterval = setInterval(skipYouTubeAds, 500); }" +
             "})()";
     }
 }

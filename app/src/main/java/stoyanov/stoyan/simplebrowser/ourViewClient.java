@@ -1,14 +1,13 @@
 package stoyanov.stoyan.simplebrowser;
 
+import android.graphics.Bitmap;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 /**
- * Custom WebViewClient with ad-blocking support.
- * When ad-blocking is enabled, intercepts requests to known ad-serving domains
- * and returns empty responses, plus injects ad-hiding JavaScript on page load.
+ * Custom WebViewClient with ad-blocking and background playback visibility patch.
  */
 public class ourViewClient extends WebViewClient {
 
@@ -41,12 +40,22 @@ public class ourViewClient extends WebViewClient {
     }
 
     @Override
+    public void onPageStarted(WebView view, String url, Bitmap favicon) {
+        super.onPageStarted(view, url, favicon);
+        // Inject background playback visibility API bypass script early
+        view.evaluateJavascript(AdBlocker.getBackgroundPlaybackScript(), null);
+    }
+
+    @Override
     public void onPageFinished(WebView view, String url) {
         super.onPageFinished(view, url);
 
+        // Always inject background playback visibility patch
+        view.evaluateJavascript(AdBlocker.getBackgroundPlaybackScript(), null);
+
         if (adBlockEnabled) {
-            // Inject the comprehensive ad-block script
-            view.evaluateJavascript(AdBlocker.getAdBlockScript().replace("javascript:", ""), null);
+            // Inject ad-block script
+            view.evaluateJavascript(AdBlocker.getAdBlockScript(), null);
         }
     }
 }
