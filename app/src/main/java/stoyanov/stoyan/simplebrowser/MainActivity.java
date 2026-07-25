@@ -2,8 +2,8 @@ package stoyanov.stoyan.simplebrowser;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import androidx.appcompat.app.AppCompatActivity;
+import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -19,6 +19,9 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.bottomappbar.BottomAppBar;
 
 public class MainActivity extends AppCompatActivity {
@@ -26,23 +29,33 @@ public class MainActivity extends AppCompatActivity {
     WebView brow;
     EditText urledit;
     ImageButton go;
-    ImageButton search;
+    ImageButton adblockBtn;
     ProgressBar progressBar;
     BottomAppBar bottomAppBar;
 
+    private ourViewClient webViewClient;
+    private boolean adBlockEnabled = true;
+    private boolean isServiceRunning = false;
+
     private static final String DEFAULT_HOME = "https://www.google.com";
     private static final String SEARCH_URL = "https://www.google.com/search?q=";
+    private static final String PREFS_NAME = "SimpleBrowserPrefs";
+    private static final String PREF_ADBLOCK = "adblock_enabled";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        progressBar = (ProgressBar)findViewById(R.id.progressBar);
-        brow = (WebView)findViewById(R.id.wv_brow);
-        urledit = (EditText)findViewById(R.id.et_url);
-        go = (ImageButton)findViewById(R.id.btn_go);
-        search = (ImageButton)findViewById(R.id.btn_go2);
+        // Load ad-block preference
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        adBlockEnabled = prefs.getBoolean(PREF_ADBLOCK, true);
+
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        brow = (WebView) findViewById(R.id.wv_brow);
+        urledit = (EditText) findViewById(R.id.et_url);
+        go = (ImageButton) findViewById(R.id.btn_go);
+        adblockBtn = (ImageButton) findViewById(R.id.btn_adblock);
         bottomAppBar = findViewById(R.id.bottom_app_bar);
 
         setSupportActionBar(bottomAppBar);
@@ -50,19 +63,23 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
-        brow.setWebViewClient(new ourViewClient());
-        brow.setWebChromeClient(new WebChromeClient(){
+        // Set up WebViewClient with ad-blocking
+        webViewClient = new ourViewClient();
+        webViewClient.setAdBlockEnabled(adBlockEnabled);
+        brow.setWebViewClient(webViewClient);
+
+        brow.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
 
-                if(newProgress == 100){
+                if (newProgress == 100) {
                     progressBar.setVisibility(View.GONE);
                     // Update URL bar with the current page URL
                     if (view.getUrl() != null) {
                         urledit.setText(view.getUrl());
                     }
-                } else{
+                } else {
                     progressBar.setVisibility(View.VISIBLE);
                 }
             }
@@ -75,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setDisplayZoomControls(false);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
 
         brow.loadUrl(DEFAULT_HOME);
 
@@ -86,15 +104,25 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Search button — always Google Search
-        search.setOnClickListener(new View.OnClickListener() {
+        // Ad-block toggle button
+        updateAdBlockButton();
+        adblockBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String query = urledit.getText().toString().trim();
-                if (!query.isEmpty()) {
-                    brow.loadUrl(SEARCH_URL + query);
-                }
-                hideKeyboardAndClearFocus();
+                adBlockEnabled = !adBlockEnabled;
+                webViewClient.setAdBlockEnabled(adBlockEnabled);
+                updateAdBlockButton();
+
+                // Persist preference
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                prefs.edit().putBoolean(PREF_ADBLOCK, adBlockEnabled).apply();
+
+                Toast.makeText(MainActivity.this,
+                        adBlockEnabled ? "Ad-block enabled" : "Ad-block disabled",
+                        Toast.LENGTH_SHORT).show();
+
+                // Reload page to apply/remove ad blocking
+                brow.reload();
             }
         });
 
@@ -103,8 +131,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_GO ||
-                    (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
-                     && event.getAction() == KeyEvent.ACTION_DOWN)) {
+                        (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                                && event.getAction() == KeyEvent.ACTION_DOWN)) {
                     loadUrlFromInput();
                     return true;
                 }
@@ -121,6 +149,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    /**
+     * Updates the ad-block button icon and background based on current state.
+     */
+    private void updateAdBlockButton() {
+        if (adBlockEnabled) {
+            adblockBtn.setImageResource(R.drawable.ic_shield);
+            adblockBtn.setBackgroundResource(R.drawable.adblock_button_on);
+        } else {
+            adblockBtn.setImageResource(R.drawable.ic_shield_off);
+            adblockBtn.setBackgroundResource(R.drawable.adblock_button_off);
+        }
     }
 
     /**
@@ -157,6 +198,54 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // --- Background Playback Lifecycle ---
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Start foreground service to keep media playing when screen is off
+        startBackgroundPlayback();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Stop the foreground service when app returns to foreground
+        stopBackgroundPlayback();
+        // Ensure WebView is active
+        brow.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopBackgroundPlayback();
+        brow.onPause();
+        brow.destroy();
+        super.onDestroy();
+    }
+
+    private void startBackgroundPlayback() {
+        if (!isServiceRunning) {
+            Intent serviceIntent = new Intent(this, BackgroundPlaybackService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            isServiceRunning = true;
+        }
+    }
+
+    private void stopBackgroundPlayback() {
+        if (isServiceRunning) {
+            Intent serviceIntent = new Intent(this, BackgroundPlaybackService.class);
+            stopService(serviceIntent);
+            isServiceRunning = false;
+        }
+    }
+
+    // --- Menu ---
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.bottom_nav_menu, menu);
@@ -166,13 +255,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemId = item.getItemId();
-        
+
         if (itemId == R.id.action_back) {
-            if(brow.canGoBack())
+            if (brow.canGoBack())
                 brow.goBack();
             return true;
         } else if (itemId == R.id.action_forward) {
-            if(brow.canGoForward())
+            if (brow.canGoForward())
                 brow.goForward();
             return true;
         } else if (itemId == R.id.action_reload) {
@@ -189,20 +278,19 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Cache cleared", Toast.LENGTH_SHORT).show();
             return true;
         }
-        
+
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public boolean onKeyDown( int keyCode, KeyEvent event )  {
-        if ( keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            if(brow.canGoBack())
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+            if (brow.canGoBack())
                 brow.goBack();
             else this.moveTaskToBack(true);
             return true;
         }
 
-        return super.onKeyDown( keyCode, event );
+        return super.onKeyDown(keyCode, event);
     }
-
 }

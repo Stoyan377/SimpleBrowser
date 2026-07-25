@@ -45,7 +45,7 @@
             android:textSize="14sp"
             tools:ignore="Autofill" />
 
-        <!-- Go Button — fixed size, scales with dp -->
+        <!-- Go Button -->
         <ImageButton
             android:id="@+id/btn_go"
             android:layout_width="40dp"
@@ -57,16 +57,16 @@
             android:padding="8dp"
             app:srcCompat="@drawable/ic_send" />
 
-        <!-- Search Button — fixed size, scales with dp -->
+        <!-- Ad-Block Toggle Button -->
         <ImageButton
-            android:id="@+id/btn_go2"
+            android:id="@+id/btn_adblock"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/button_background"
-            android:contentDescription="@string/search"
+            android:background="@drawable/adblock_button_on"
+            android:contentDescription="@string/adblock"
             android:scaleType="centerInside"
             android:padding="8dp"
-            app:srcCompat="@drawable/ic_search" />
+            app:srcCompat="@drawable/ic_shield" />
 
     </LinearLayout>
 
