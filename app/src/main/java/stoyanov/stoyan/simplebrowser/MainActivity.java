@@ -47,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Initialize ad blocker with comprehensive hosts list
+        AdBlocker.init(this);
+
         // Load ad-block preference
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         adBlockEnabled = prefs.getBoolean(PREF_ADBLOCK, true);
@@ -93,6 +96,12 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+
+        // Keep WebView renderer alive at high priority in background
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            brow.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        }
 
         brow.loadUrl(DEFAULT_HOME);
 
@@ -194,12 +203,42 @@ public class MainActivity extends AppCompatActivity {
 
     // --- Background Playback Lifecycle ---
 
+    /**
+     * JavaScript snippet to force-resume video playback from Java side.
+     * This runs after Android dispatches the visibilitychange event,
+     * re-overriding visibility state and resuming any paused video.
+     */
+    private static final String JS_FORCE_RESUME =
+        "try {" +
+        "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
+        "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
+        "  var v = document.querySelector('video');" +
+        "  if (v && v.paused && !v.ended) { v.play().catch(function(){}); }" +
+        "} catch(e) {}";
+
     @Override
     protected void onPause() {
         super.onPause();
         startBackgroundPlayback();
         if (brow != null) {
-            brow.onResume(); // Resume WebView JS/media execution after super.onPause()
+            brow.onResume();
+            // Force-resume after a short delay to catch YouTube's pause
+            brow.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (brow != null) {
+                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
+                    }
+                }
+            }, 200);
+            brow.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (brow != null) {
+                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
+                    }
+                }
+            }, 1000);
         }
     }
 
@@ -208,7 +247,23 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         startBackgroundPlayback();
         if (brow != null) {
-            brow.onResume(); // Prevent WebView from stopping playback when screen turns completely off
+            brow.onResume();
+            brow.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (brow != null) {
+                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
+                    }
+                }
+            }, 300);
+            brow.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (brow != null) {
+                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
+                    }
+                }
+            }, 1500);
         }
     }
 

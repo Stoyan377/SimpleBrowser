@@ -7,7 +7,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 /**
- * Custom WebViewClient with ad-blocking and background playback visibility patch.
+ * Custom WebViewClient with network-level ad-blocking,
+ * JavaScript ad/cookie element hiding, YouTube ad skipping,
+ * and background playback visibility API bypass.
  */
 public class ourViewClient extends WebViewClient {
 
@@ -42,7 +44,7 @@ public class ourViewClient extends WebViewClient {
     @Override
     public void onPageStarted(WebView view, String url, Bitmap favicon) {
         super.onPageStarted(view, url, favicon);
-        // Inject background playback visibility API bypass script early
+        // Inject background playback visibility bypass early, before page JS runs
         view.evaluateJavascript(AdBlocker.getBackgroundPlaybackScript(), null);
     }
 
@@ -50,12 +52,23 @@ public class ourViewClient extends WebViewClient {
     public void onPageFinished(WebView view, String url) {
         super.onPageFinished(view, url);
 
-        // Always inject background playback visibility patch
+        // Re-inject background playback patch (in case page JS overwrote it)
         view.evaluateJavascript(AdBlocker.getBackgroundPlaybackScript(), null);
 
         if (adBlockEnabled) {
-            // Inject ad-block script
+            // Inject comprehensive ad-block + cookie consent hiding + YouTube ad skipper
             view.evaluateJavascript(AdBlocker.getAdBlockScript(), null);
+        }
+    }
+
+    @Override
+    public void onLoadResource(WebView view, String url) {
+        super.onLoadResource(view, url);
+        // For SPA pages like YouTube that don't trigger full page loads,
+        // periodically re-ensure background playback script is active
+        if (url != null && url.contains("youtube.com")) {
+            view.evaluateJavascript(
+                "if(!window.__sbBgPlayback){" + AdBlocker.getBackgroundPlaybackScript() + "}", null);
         }
     }
 }
