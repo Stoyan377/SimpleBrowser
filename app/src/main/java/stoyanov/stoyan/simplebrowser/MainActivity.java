@@ -15,6 +15,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -32,6 +33,10 @@ public class MainActivity extends AppCompatActivity {
     ImageButton adblockBtn;
     ProgressBar progressBar;
     BottomAppBar bottomAppBar;
+    FrameLayout fullscreenContainer;
+
+    private View customView;
+    private WebChromeClient.CustomViewCallback customViewCallback;
 
     private ourViewClient webViewClient;
     private boolean adBlockEnabled = true;
@@ -60,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         go = (ImageButton) findViewById(R.id.btn_go);
         adblockBtn = (ImageButton) findViewById(R.id.btn_adblock);
         bottomAppBar = findViewById(R.id.bottom_app_bar);
+        fullscreenContainer = (FrameLayout) findViewById(R.id.fullscreen_container);
 
         setSupportActionBar(bottomAppBar);
         if (getSupportActionBar() != null) {
@@ -85,6 +91,36 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     progressBar.setVisibility(View.VISIBLE);
                 }
+            }
+
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (customView != null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+                customView = view;
+                customViewCallback = callback;
+
+                fullscreenContainer.addView(customView, new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT));
+                fullscreenContainer.setVisibility(View.VISIBLE);
+
+                brow.setVisibility(View.GONE);
+                findViewById(R.id.ll_urlgo).setVisibility(View.GONE);
+                bottomAppBar.setVisibility(View.GONE);
+                findViewById(R.id.bottom_divider).setVisibility(View.GONE);
+
+                getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                hideCustomView();
             }
         });
 
@@ -160,6 +196,26 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void hideCustomView() {
+        if (customView == null) return;
+
+        fullscreenContainer.removeView(customView);
+        fullscreenContainer.setVisibility(View.GONE);
+
+        brow.setVisibility(View.VISIBLE);
+        findViewById(R.id.ll_urlgo).setVisibility(View.VISIBLE);
+        bottomAppBar.setVisibility(View.VISIBLE);
+        findViewById(R.id.bottom_divider).setVisibility(View.VISIBLE);
+
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+
+        if (customViewCallback != null) {
+            customViewCallback.onCustomViewHidden();
+        }
+        customView = null;
+        customViewCallback = null;
+    }
+
     /**
      * Updates the ad-block button icon and background based on current state.
      */
@@ -221,7 +277,6 @@ public class MainActivity extends AppCompatActivity {
         startBackgroundPlayback();
         if (brow != null) {
             brow.onResume();
-            // Force-resume after a short delay to catch YouTube's pause
             brow.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -345,6 +400,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+            if (customView != null) {
+                hideCustomView();
+                return true;
+            }
             if (brow.canGoBack())
                 brow.goBack();
             else this.moveTaskToBack(true);
