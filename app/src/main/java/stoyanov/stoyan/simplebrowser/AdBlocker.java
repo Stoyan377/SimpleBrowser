@@ -156,7 +156,7 @@ public class AdBlocker {
     /**
      * JavaScript executed periodically from Java Handler while app is in background.
      * Handles visibility re-override, ad skipping, ad fast-forwarding, and force-resume
-     * for both YouTube and YouTube Music.
+     * for both YouTube and YouTube Music across all video and audio elements.
      */
     public static String getBgTickScript() {
         return "try {" +
@@ -164,29 +164,30 @@ public class AdBlocker {
             "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
             "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
 
-            // --- Detect ad playing on YouTube / YouTube Music ---
-            "  var adOn = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay');" +
-            "  var v = document.querySelector('video');" +
+            // Click skip buttons & YouTube Music "Are you still listening?" prompts
+            "  var btns = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"], .ytmusic-you-there-renderer button, .ytmusic-you-there-renderer .dismiss-button');" +
+            "  for (var i=0; i<btns.length; i++) { try { btns[i].click(); } catch(e){} }" +
+            "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
+            "  for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            "  if (adOn && v) {" +
-            // Active ad detected: mute, speed up 16x, and fast-forward to end
-            "    v.muted = true;" +
-            "    v.playbackRate = 16;" +
-            "    if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration - 0.5) {" +
-            "      v.currentTime = v.duration - 0.1;" +
-            "    }" +
-            // Click skip buttons specifically targeting ytp-ad-skip
-            "    var btns = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"]');" +
-            "    for (var i=0; i<btns.length; i++) { try { btns[i].click(); } catch(e){} }" +
-            "    var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
-            "    for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
-            "    if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
-            "  } else if (v) {" +
-            // No ad active — restore normal playback speed & volume
-            "    if (v.playbackRate > 2) { v.playbackRate = 1; v.muted = false; }" +
-            // Force-resume if paused by background event and user didn't pause
-            "    if (v.paused && !v.ended && !window.__sbUserPaused && v.readyState >= 2) {" +
-            "      if (window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
+            // Check for active ad on YouTube / YouTube Music
+            "  var adOn = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay, .ytp-ad-module, ytmusic-ad-rendering-view-model, ytmusic-player-bar[has-ad]');" +
+
+            "  var mediaEls = document.querySelectorAll('video, audio');" +
+            "  for (var k=0; k<mediaEls.length; k++) {" +
+            "    var v = mediaEls[k];" +
+            "    if (adOn || btns.length > 0) {" +
+            "      v.muted = true;" +
+            "      v.playbackRate = 16;" +
+            "      if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration - 0.3) {" +
+            "        v.currentTime = v.duration - 0.1;" +
+            "      }" +
+            "      if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
+            "    } else {" +
+            "      if (v.playbackRate > 2) { v.playbackRate = 1; v.muted = false; }" +
+            "      if (v.paused && !v.ended && !window.__sbUserPaused) {" +
+            "        if (window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
+            "      }" +
             "    }" +
             "  }" +
             "} catch(e) {}";
@@ -203,29 +204,33 @@ public class AdBlocker {
             // --- YouTube / YouTube Music Ad Skipper ---
             "var wasAd = false;" +
             "function skipYTAds(){" +
-            "  var adOn = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay');" +
-            "  var vid = document.querySelector('video');" +
+            "  var btns = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"], .ytmusic-you-there-renderer button, .ytmusic-you-there-renderer .dismiss-button');" +
+            "  for (var i=0; i<btns.length; i++) { try { btns[i].click(); } catch(e){} }" +
+            "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
+            "  for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            "  if (adOn && vid) {" +
-            "    wasAd = true;" +
-            "    vid.muted = true;" +
-            "    vid.playbackRate = 16;" +
-            "    if (isFinite(vid.duration) && vid.duration > 0 && vid.currentTime < vid.duration - 0.5) {" +
-            "      vid.currentTime = vid.duration - 0.1;" +
-            "    }" +
-            "    var btns = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"]');" +
-            "    for (var i=0; i<btns.length; i++) { try { btns[i].click(); } catch(e){} }" +
-            "    var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
-            "    for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
-            "    if (vid.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(vid).catch(function(){});" +
-            "  } else if (wasAd && vid) {" +
-            "    wasAd = false;" +
-            "    vid.playbackRate = 1;" +
-            "    vid.muted = false;" +
-            "    if (vid.paused && !window.__sbUserPaused) {" +
-            "      vid.play().catch(function(){});" +
-            "      setTimeout(function(){ if(vid.paused && !vid.ended) vid.play().catch(function(){}); }, 500);" +
-            "      setTimeout(function(){ if(vid.paused && !vid.ended) vid.play().catch(function(){}); }, 1500);" +
+            "  var adOn = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay, .ytp-ad-module, ytmusic-ad-rendering-view-model, ytmusic-player-bar[has-ad]');" +
+            "  var mediaEls = document.querySelectorAll('video, audio');" +
+
+            "  for (var k=0; k<mediaEls.length; k++) {" +
+            "    var vid = mediaEls[k];" +
+            "    if (adOn || btns.length > 0) {" +
+            "      wasAd = true;" +
+            "      vid.muted = true;" +
+            "      vid.playbackRate = 16;" +
+            "      if (isFinite(vid.duration) && vid.duration > 0 && vid.currentTime < vid.duration - 0.3) {" +
+            "        vid.currentTime = vid.duration - 0.1;" +
+            "      }" +
+            "      if (vid.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(vid).catch(function(){});" +
+            "    } else if (wasAd && vid) {" +
+            "      wasAd = false;" +
+            "      vid.playbackRate = 1;" +
+            "      vid.muted = false;" +
+            "      if (vid.paused && !window.__sbUserPaused) {" +
+            "        vid.play().catch(function(){});" +
+            "        setTimeout(function(){ if(vid.paused && !vid.ended) vid.play().catch(function(){}); }, 500);" +
+            "        setTimeout(function(){ if(vid.paused && !vid.ended) vid.play().catch(function(){}); }, 1500);" +
+            "      }" +
             "    }" +
             "  }" +
             "}" +
@@ -243,7 +248,7 @@ public class AdBlocker {
             "ytd-in-feed-ad-layout-renderer, ytd-banner-promo-renderer, " +
             ".ytd-mealbar-promo-renderer, #masthead-ad, .video-ads, " +
             "ytd-statement-banner-renderer, tp-yt-paper-dialog.ytd-popup-container, " +
-            "ytmusic-ad-rendering-view-model, " +
+            "ytmusic-ad-rendering-view-model, ytmusic-you-there-renderer, " +
             "[id*=\"google_ads\"], [id*=\"ad-container\"], [id*=\"ad_container\"], " +
             "[class*=\"ad-banner\"], [class*=\"ad_banner\"], " +
             "ins.adsbygoogle, [class*=\"adsbygoogle\"], " +
