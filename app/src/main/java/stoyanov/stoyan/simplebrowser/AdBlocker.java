@@ -173,17 +173,39 @@ public class AdBlocker {
             "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
             "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
 
-            // --- Ad skipper (same logic as skipYTAds) ---
+            // --- Click all skip/close buttons (YouTube + YouTube Music) ---
             "  var btns = document.querySelectorAll(" +
             "    '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, " +
-            "     button.ytp-ad-skip-button-modern, [class*=\"skip-button\"], .ytp-ad-survey-answer-button'" +
+            "     button.ytp-ad-skip-button-modern, [class*=\"skip-button\"], .ytp-ad-survey-answer-button, " +
+            "     .ytmusic-you-there-renderer button, " +
+            "     button[aria-label*=\"Skip\"], button[aria-label*=\"skip\"]'" +
             "  );" +
             "  for(var i=0;i<btns.length;i++){try{btns[i].click();}catch(e){}}" +
-            "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
+            "  var closes = document.querySelectorAll(" +
+            "    '.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container, " +
+            "     .ytmusic-you-there-renderer .dismiss-button'" +
+            "  );" +
             "  for(var j=0;j<closes.length;j++){try{closes[j].click();}catch(e){}}" +
 
-            // Speed up video ads
+            // --- Detect ad playing (YouTube + YouTube Music) ---
+            // YouTube: .ad-showing on .html5-video-player
+            // YouTube Music: ad indicators in player bar, or ad-showing on embedded player
             "  var adOn = document.querySelector('.ad-showing, .ad-interrupting');" +
+            // YouTube Music fallback: check for ad text/badge in player bar
+            "  if(!adOn) {" +
+            "    var adBadge = document.querySelector(" +
+            "      'ytmusic-player-bar .advertisement, " +
+            "       ytmusic-player-bar .ad-showing, " +
+            "       ytmusic-player-bar [class*=\"ad-badge\"], " +
+            "       ytmusic-player-bar .ytmusic-ad-text, " +
+            "       .ytmusic-player-bar .ad-info-text, " +
+            "       .ad-container.ytmusic, " +
+            "       ytmusic-ad-rendering-view-model, " +
+            "       #player-bar-ad-info'" +
+            "    );" +
+            "    if(adBadge) adOn = adBadge;" +
+            "  }" +
+
             "  var v = document.querySelector('video');" +
             "  if(adOn && v) {" +
             "    v.muted = true;" +
@@ -208,23 +230,39 @@ public class AdBlocker {
             "if (window.__sbAdBlock) return;" +
             "window.__sbAdBlock = true;" +
 
-            // --- YouTube Ad Skipper ---
+            // --- YouTube + YouTube Music Ad Skipper ---
             "var wasAd = false;" +
             "function skipYTAds(){" +
+            // Click skip buttons (YouTube + YouTube Music)
             "  var btns = document.querySelectorAll(" +
             "    '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, " +
-            "     button.ytp-ad-skip-button-modern, [class*=\"skip-button\"], .ytp-ad-survey-answer-button'" +
+            "     button.ytp-ad-skip-button-modern, [class*=\"skip-button\"], .ytp-ad-survey-answer-button, " +
+            "     .ytmusic-you-there-renderer button, " +
+            "     button[aria-label*=\"Skip\"], button[aria-label*=\"skip\"]'" +
             "  );" +
             "  for(var i=0;i<btns.length;i++){try{btns[i].click();}catch(e){}}" +
-            "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
+            // Close overlay ads + YouTube Music "Are you still listening?" prompt
+            "  var closes = document.querySelectorAll(" +
+            "    '.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container, " +
+            "     .ytmusic-you-there-renderer .dismiss-button'" +
+            "  );" +
             "  for(var j=0;j<closes.length;j++){try{closes[j].click();}catch(e){}}" +
 
+            // Detect ad (YouTube: .ad-showing; YouTube Music: various ad indicators)
             "  var adOn = document.querySelector('.ad-showing, .ad-interrupting');" +
+            "  if(!adOn){" +
+            "    adOn = document.querySelector(" +
+            "      'ytmusic-player-bar .advertisement, ytmusic-player-bar .ad-showing, " +
+            "       ytmusic-player-bar [class*=\"ad-badge\"], ytmusic-ad-rendering-view-model, " +
+            "       #player-bar-ad-info, .ad-container.ytmusic'" +
+            "    );" +
+            "  }" +
             "  var vid = document.querySelector('video');" +
             "  if(adOn && vid){" +
             "    wasAd = true;" +
             "    vid.muted = true;" +
-            "    if(vid.playbackRate < 10) vid.playbackRate = 16;" +  // 16x speed
+            "    if(vid.playbackRate < 10) vid.playbackRate = 16;" +
+            "    if(vid.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(vid).catch(function(){});" +
             "  } else if(wasAd && vid){" +
             "    wasAd = false;" +
             "    vid.playbackRate = 1;" +
@@ -250,6 +288,10 @@ public class AdBlocker {
             "ytd-in-feed-ad-layout-renderer, ytd-banner-promo-renderer, " +
             ".ytd-mealbar-promo-renderer, #masthead-ad, .video-ads, " +
             "ytd-statement-banner-renderer, tp-yt-paper-dialog.ytd-popup-container, " +
+            // YouTube Music ad elements
+            "ytmusic-ad-rendering-view-model, ytmusic-you-there-renderer, " +
+            "#player-bar-ad-info, .ytmusic-player-bar .advertisement, " +
+            "ytmusic-promoted-sparkles-web-renderer, " +
             "[id*=\"google_ads\"], [id*=\"ad-container\"], [id*=\"ad_container\"], " +
             "[class*=\"ad-banner\"], [class*=\"ad_banner\"], " +
             "ins.adsbygoogle, [class*=\"adsbygoogle\"], " +
