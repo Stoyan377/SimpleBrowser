@@ -155,8 +155,8 @@ public class AdBlocker {
 
     /**
      * JavaScript executed periodically from Java Handler while app is in background.
-     * Handles visibility re-override, ad skipping, ad fast-forwarding, and force-resume
-     * for both YouTube and YouTube Music across all video and audio elements.
+     * Safely speeds up ads 16x without altering currentTime (preventing video/song skipping),
+     * auto-clicks skip buttons, and force-resumes background playback when paused by screen lock.
      */
     public static String getBgTickScript() {
         return "try {" +
@@ -164,28 +164,33 @@ public class AdBlocker {
             "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
             "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
 
-            // Click skip buttons & YouTube Music "Are you still listening?" prompts
-            "  var btns = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"], .ytmusic-you-there-renderer button, .ytmusic-you-there-renderer .dismiss-button');" +
-            "  for (var i=0; i<btns.length; i++) { try { btns[i].click(); } catch(e){} }" +
+            // Precise ad detection on player container
+            "  var player = document.querySelector('.html5-video-player, #movie_player, ytmusic-player');" +
+            "  var isAd = false;" +
+            "  if (player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'))) {" +
+            "    isAd = true;" +
+            "  }" +
+
+            // Click skip buttons specifically targeting ytp-ad-skip
+            "  var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button');" +
+            "  if (skipBtn) {" +
+            "    isAd = true;" +
+            "    try { skipBtn.click(); } catch(e){}" +
+            "  }" +
+
+            // Close overlay ads
             "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
             "  for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            // Check for active ad on YouTube / YouTube Music
-            "  var adOn = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay, .ytp-ad-module, ytmusic-ad-rendering-view-model, ytmusic-player-bar[has-ad]');" +
-
-            "  var mediaEls = document.querySelectorAll('video, audio');" +
-            "  for (var k=0; k<mediaEls.length; k++) {" +
-            "    var v = mediaEls[k];" +
-            "    if (adOn || btns.length > 0) {" +
+            "  var v = document.querySelector('video');" +
+            "  if (v) {" +
+            "    if (isAd) {" +
             "      v.muted = true;" +
             "      v.playbackRate = 16;" +
-            "      if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration - 0.3) {" +
-            "        v.currentTime = v.duration - 0.1;" +
-            "      }" +
             "      if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "    } else {" +
             "      if (v.playbackRate > 2) { v.playbackRate = 1; v.muted = false; }" +
-            "      if (v.paused && !v.ended && !window.__sbUserPaused) {" +
+            "      if (v.paused && !v.ended && !window.__sbUserPaused && v.readyState >= 1 && v.currentTime > 0) {" +
             "        if (window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "      }" +
             "    }" +
@@ -202,34 +207,35 @@ public class AdBlocker {
             "window.__sbAdBlock = true;" +
 
             // --- YouTube / YouTube Music Ad Skipper ---
-            "var wasAd = false;" +
             "function skipYTAds(){" +
-            "  var btns = document.querySelectorAll('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"], .ytmusic-you-there-renderer button, .ytmusic-you-there-renderer .dismiss-button');" +
-            "  for (var i=0; i<btns.length; i++) { try { btns[i].click(); } catch(e){} }" +
+            "  var player = document.querySelector('.html5-video-player, #movie_player, ytmusic-player');" +
+            "  var isAd = false;" +
+            "  if (player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'))) {" +
+            "    isAd = true;" +
+            "  }" +
+
+            "  var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button');" +
+            "  if (skipBtn) {" +
+            "    isAd = true;" +
+            "    try { skipBtn.click(); } catch(e){}" +
+            "  }" +
+
             "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
             "  for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            "  var adOn = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay, .ytp-ad-module, ytmusic-ad-rendering-view-model, ytmusic-player-bar[has-ad]');" +
-            "  var mediaEls = document.querySelectorAll('video, audio');" +
-
-            "  for (var k=0; k<mediaEls.length; k++) {" +
-            "    var vid = mediaEls[k];" +
-            "    if (adOn || btns.length > 0) {" +
-            "      wasAd = true;" +
+            "  var vid = document.querySelector('video');" +
+            "  if (vid) {" +
+            "    if (isAd) {" +
             "      vid.muted = true;" +
             "      vid.playbackRate = 16;" +
-            "      if (isFinite(vid.duration) && vid.duration > 0 && vid.currentTime < vid.duration - 0.3) {" +
-            "        vid.currentTime = vid.duration - 0.1;" +
-            "      }" +
             "      if (vid.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(vid).catch(function(){});" +
-            "    } else if (wasAd && vid) {" +
-            "      wasAd = false;" +
-            "      vid.playbackRate = 1;" +
-            "      vid.muted = false;" +
-            "      if (vid.paused && !window.__sbUserPaused) {" +
-            "        vid.play().catch(function(){});" +
-            "        setTimeout(function(){ if(vid.paused && !vid.ended) vid.play().catch(function(){}); }, 500);" +
-            "        setTimeout(function(){ if(vid.paused && !vid.ended) vid.play().catch(function(){}); }, 1500);" +
+            "    } else {" +
+            "      if (vid.playbackRate > 2) {" +
+            "        vid.playbackRate = 1;" +
+            "        vid.muted = false;" +
+            "      }" +
+            "      if (vid.paused && !vid.ended && !window.__sbUserPaused && vid.readyState >= 1 && vid.currentTime > 0) {" +
+            "        if (window.__sbOrigPlay) window.__sbOrigPlay.call(vid).catch(function(){});" +
             "      }" +
             "    }" +
             "  }" +
@@ -248,7 +254,7 @@ public class AdBlocker {
             "ytd-in-feed-ad-layout-renderer, ytd-banner-promo-renderer, " +
             ".ytd-mealbar-promo-renderer, #masthead-ad, .video-ads, " +
             "ytd-statement-banner-renderer, tp-yt-paper-dialog.ytd-popup-container, " +
-            "ytmusic-ad-rendering-view-model, ytmusic-you-there-renderer, " +
+            "ytmusic-ad-rendering-view-model, " +
             "[id*=\"google_ads\"], [id*=\"ad-container\"], [id*=\"ad_container\"], " +
             "[class*=\"ad-banner\"], [class*=\"ad_banner\"], " +
             "ins.adsbygoogle, [class*=\"adsbygoogle\"], " +
