@@ -131,12 +131,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
         WebSettings webSettings = brow.getSettings();
+        webSettings.setUserAgentString(null); // Force default Android Mobile User-Agent
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
-        webSettings.setLoadWithOverviewMode(true);
-        webSettings.setUseWideViewPort(true);
+        webSettings.setLoadWithOverviewMode(false);
+        webSettings.setUseWideViewPort(false); // Disable desktop viewport
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
