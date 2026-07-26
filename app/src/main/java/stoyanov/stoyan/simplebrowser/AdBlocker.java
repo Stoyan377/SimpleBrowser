@@ -81,8 +81,8 @@ public class AdBlocker {
     }
 
     /**
-     * JavaScript to bypass Page Visibility API, force 16x ad speed, auto-click skip buttons,
-     * and maintain uninterrupted background media playback across YouTube & YouTube Music.
+     * JavaScript to bypass Page Visibility API, handle YouTube/YouTube Music ad skipping,
+     * and maintain background playback when screen is off.
      */
     public static String getBackgroundPlaybackScript() {
         return "(function() {" +
@@ -91,7 +91,6 @@ public class AdBlocker {
             "try {" +
             "  if (typeof window.__sbUserPaused === 'undefined') window.__sbUserPaused = false;" +
             "  if (typeof window.__sbIsBackground === 'undefined') window.__sbIsBackground = false;" +
-            "  if (typeof window.__sbIsAdPlaying === 'undefined') window.__sbIsAdPlaying = false;" +
             "  window.__sbLastClickTime = 0;" +
 
             // 1. Override document visibility properties
@@ -149,54 +148,30 @@ public class AdBlocker {
             "    return origPlay.apply(this, arguments);" +
             "  };" +
 
-            // 6. Override HTMLMediaElement.prototype.playbackRate setter to lock 16x speed during ads
-            "  try {" +
-            "    var rateDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'playbackRate');" +
-            "    if (rateDesc && rateDesc.set) {" +
-            "      window.__sbOrigSetRate = rateDesc.set;" +
-            "      Object.defineProperty(HTMLMediaElement.prototype, 'playbackRate', {" +
-            "        get: function() { return rateDesc.get.call(this); }," +
-            "        set: function(val) {" +
-            "          if (window.__sbIsAdPlaying && val < 10) {" +
-            "            return rateDesc.set.call(this, 16);" +
-            "          }" +
-            "          return rateDesc.set.call(this, val);" +
-            "        }," +
-            "        configurable: true" +
-            "      });" +
-            "    }" +
-            "  } catch(e) {}" +
-
-            // 7. Core Ad Skipping Engine function
+            // 6. Safe, clean ad checking & skipping engine
             "  window.__sbCheckAndSkipAds = function() {" +
             "    try {" +
-            // Check for ad-showing / ad-interrupting classes anywhere in DOM
-            "      var adEl = document.querySelector('.ad-showing, .ad-interrupting, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]');" +
-            "      var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"]');" +
+            "      var adEl = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay');" +
+            "      var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button');" +
             "      var isAd = !!(adEl || skipBtn);" +
-            "      window.__sbIsAdPlaying = isAd;" +
 
             // Auto-click skip button if present
             "      if (skipBtn) { try { skipBtn.click(); } catch(e){} }" +
             "      var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
             "      for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            // Process all media elements
-            "      var vList = document.querySelectorAll('video');" +
-            "      for (var k=0; k<vList.length; k++) {" +
-            "        var v = vList[k];" +
+            "      var v = document.querySelector('video');" +
+            "      if (v) {" +
             "        if (isAd) {" +
-            "          v.muted = true;" +
-            "          if (v.playbackRate < 10) {" +
-            "            if (window.__sbOrigSetRate) window.__sbOrigSetRate.call(v, 16); else v.playbackRate = 16;" +
-            "          }" +
+            "          if (!v.muted) v.muted = true;" +
+            "          if (v.playbackRate < 4) v.playbackRate = 8;" +  // Set 8x ONCE, avoid re-triggering playbackRate setters
             "          if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "        } else {" +
             "          if (v.playbackRate > 2) {" +
-            "            if (window.__sbOrigSetRate) window.__sbOrigSetRate.call(v, 1); else v.playbackRate = 1;" +
+            "            v.playbackRate = 1;" +
             "            v.muted = false;" +
             "          }" +
-            "          if (v.paused && !v.ended && !window.__sbUserPaused && v.readyState >= 1) {" +
+            "          if (v.paused && !v.ended && !window.__sbUserPaused) {" +
             "            if (window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "          }" +
             "        }" +
@@ -204,9 +179,8 @@ public class AdBlocker {
             "    } catch(e) {}" +
             "  };" +
 
-            // 8. Continuous internal interval + MutationObserver for instant skipping
-            "  setInterval(function() { window.__sbCheckAndSkipAds(); }, 300);" +
-            "  new MutationObserver(function() { window.__sbCheckAndSkipAds(); }).observe(document.body || document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['class']});" +
+            // 7. Internal tick interval (500ms)
+            "  setInterval(function() { window.__sbCheckAndSkipAds(); }, 500);" +
 
             "} catch(e) {}" +
             "})()";
@@ -214,7 +188,6 @@ public class AdBlocker {
 
     /**
      * JavaScript executed periodically from Java Handler while app is in background.
-     * Backs up the internal JS engine tick to guarantee ad-skipping on locked screen.
      */
     public static String getBgTickScript() {
         return "try {" +
