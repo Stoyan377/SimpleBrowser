@@ -119,20 +119,13 @@ public class AdBlocker {
             "  document.addEventListener('click', recordClick, true);" +
             "  document.addEventListener('touchstart', recordClick, true);" +
 
-            // 4. Override HTMLMediaElement.prototype.pause
+            // 4. Override HTMLMediaElement.prototype.pause (always execute origPause so YouTube ad state machine transitions cleanly)
             "  var origPause = HTMLMediaElement.prototype.pause;" +
             "  window.__sbOrigPause = origPause;" +
             "  HTMLMediaElement.prototype.pause = function() {" +
             "    var timeSinceClick = Date.now() - (window.__sbLastClickTime || 0);" +
             "    if (timeSinceClick < 1000) {" +
             "      window.__sbUserPaused = true;" +
-            "      return origPause.apply(this, arguments);" +
-            "    }" +
-            "    if (window.__sbUserPaused) {" +
-            "      return origPause.apply(this, arguments);" +
-            "    }" +
-            "    if (window.__sbIsBackground) {" +
-            "      return;" +  // Block background pause
             "    }" +
             "    return origPause.apply(this, arguments);" +
             "  };" +
@@ -164,7 +157,7 @@ public class AdBlocker {
             "      if (v) {" +
             "        if (isAd) {" +
             "          if (!v.muted) v.muted = true;" +
-            "          if (v.playbackRate < 4) v.playbackRate = 8;" +  // Set 8x ONCE, avoid re-triggering playbackRate setters
+            "          if (v.playbackRate < 4) v.playbackRate = 8;" +
             "          if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "        } else {" +
             "          if (v.playbackRate > 2) {" +
