@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,6 +43,10 @@ public class MainActivity extends AppCompatActivity {
     private ourViewClient webViewClient;
     private boolean adBlockEnabled = true;
     private boolean isServiceRunning = false;
+
+    // Handler for periodic background tick (ad skipping + force resume)
+    private final Handler bgHandler = new Handler(Looper.getMainLooper());
+    private Runnable bgTickRunnable;
 
     private static final String DEFAULT_HOME = "https://www.google.com";
     private static final String SEARCH_URL = "https://www.google.com/search?q=";
@@ -259,40 +265,18 @@ public class MainActivity extends AppCompatActivity {
 
     // --- Background Playback Lifecycle ---
 
-    /**
-     * JavaScript snippet to force-resume video playback from Java side when screen locks/backgrounds.
-     * Respects intentional user pauses (checks !window.__sbUserPaused).
-     */
-    private static final String JS_FORCE_RESUME =
-        "try {" +
-        "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
-        "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
-        "  var v = document.querySelector('video');" +
-        "  if (v && v.paused && !v.ended && !window.__sbUserPaused) { v.play().catch(function(){}); }" +
-        "} catch(e) {}";
-
     @Override
     protected void onPause() {
         super.onPause();
         startBackgroundPlayback();
         if (brow != null) {
-            brow.onResume();
-            brow.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (brow != null) {
-                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
-                    }
-                }
-            }, 200);
-            brow.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (brow != null) {
-                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
-                    }
-                }
-            }, 1000);
+            brow.onResume(); // Keep WebView JS/media execution alive
+
+            // Tell JS we're going to background — pause override will block background pauses
+            brow.evaluateJavascript("window.__sbIsBackground = true;", null);
+
+            // Start repeating background tick: ad-skip + force-resume every 500ms
+            startBgTick();
         }
     }
 
@@ -302,41 +286,57 @@ public class MainActivity extends AppCompatActivity {
         startBackgroundPlayback();
         if (brow != null) {
             brow.onResume();
-            brow.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (brow != null) {
-                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
-                    }
-                }
-            }, 300);
-            brow.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (brow != null) {
-                        brow.evaluateJavascript(JS_FORCE_RESUME, null);
-                    }
-                }
-            }, 1500);
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // Stop background tick
+        stopBgTick();
+
         if (brow != null) {
             brow.onResume();
+            // Tell JS we're back in foreground — allow normal pause behavior
+            brow.evaluateJavascript("window.__sbIsBackground = false;", null);
         }
     }
 
     @Override
     protected void onDestroy() {
+        stopBgTick();
         stopBackgroundPlayback();
         if (brow != null) {
             brow.onPause();
             brow.destroy();
         }
         super.onDestroy();
+    }
+
+    /**
+     * Start a repeating Handler callback that runs the background tick script
+     * every 500ms. This ensures ad-skipping and force-resume work even if
+     * JS setInterval is throttled by Android WebView in the background.
+     */
+    private void startBgTick() {
+        stopBgTick(); // Clear any existing
+        bgTickRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (brow != null) {
+                    brow.evaluateJavascript(AdBlocker.getBgTickScript(), null);
+                }
+                bgHandler.postDelayed(this, 500);
+            }
+        };
+        bgHandler.postDelayed(bgTickRunnable, 300);
+    }
+
+    private void stopBgTick() {
+        if (bgTickRunnable != null) {
+            bgHandler.removeCallbacks(bgTickRunnable);
+            bgTickRunnable = null;
+        }
     }
 
     private void startBackgroundPlayback() {
