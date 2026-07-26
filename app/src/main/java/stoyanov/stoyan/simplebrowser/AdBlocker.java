@@ -155,8 +155,8 @@ public class AdBlocker {
 
     /**
      * JavaScript executed periodically from Java Handler while app is in background.
-     * Safely speeds up ads 16x without altering currentTime (preventing video/song skipping),
-     * auto-clicks skip buttons, and force-resumes background playback when paused by screen lock.
+     * Accurately detects ads across YouTube & YouTube Music by querying the entire DOM tree,
+     * speeds ads up 16x, clicks skip buttons, and force-resumes media when screen is locked.
      */
     public static String getBgTickScript() {
         return "try {" +
@@ -164,26 +164,27 @@ public class AdBlocker {
             "  Object.defineProperty(document, 'hidden', {get:function(){return false}, configurable:true});" +
             "  Object.defineProperty(document, 'visibilityState', {get:function(){return 'visible'}, configurable:true});" +
 
-            // Precise ad detection on player container
-            "  var player = document.querySelector('.html5-video-player, #movie_player, ytmusic-player');" +
+            // Global DOM ad detection (matches any element with ad-showing/ad-interrupting class or ytp-ad overlay)
             "  var isAd = false;" +
-            "  if (player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'))) {" +
+            "  if (document.querySelector('.ad-showing, .ad-interrupting, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]')) {" +
             "    isAd = true;" +
             "  }" +
 
-            // Click skip buttons specifically targeting ytp-ad-skip
-            "  var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button');" +
+            // Check for skip button anywhere in document
+            "  var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"]');" +
             "  if (skipBtn) {" +
             "    isAd = true;" +
             "    try { skipBtn.click(); } catch(e){}" +
             "  }" +
 
-            // Close overlay ads
+            // Click overlay close buttons
             "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
             "  for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            "  var v = document.querySelector('video');" +
-            "  if (v) {" +
+            // Process all video elements
+            "  var vList = document.querySelectorAll('video');" +
+            "  for (var k=0; k<vList.length; k++) {" +
+            "    var v = vList[k];" +
             "    if (isAd) {" +
             "      v.muted = true;" +
             "      v.playbackRate = 16;" +
@@ -208,13 +209,12 @@ public class AdBlocker {
 
             // --- YouTube / YouTube Music Ad Skipper ---
             "function skipYTAds(){" +
-            "  var player = document.querySelector('.html5-video-player, #movie_player, ytmusic-player');" +
             "  var isAd = false;" +
-            "  if (player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'))) {" +
+            "  if (document.querySelector('.ad-showing, .ad-interrupting, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]')) {" +
             "    isAd = true;" +
             "  }" +
 
-            "  var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button');" +
+            "  var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button[class*=\"ytp-ad-skip\"]');" +
             "  if (skipBtn) {" +
             "    isAd = true;" +
             "    try { skipBtn.click(); } catch(e){}" +
@@ -223,8 +223,9 @@ public class AdBlocker {
             "  var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
             "  for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
 
-            "  var vid = document.querySelector('video');" +
-            "  if (vid) {" +
+            "  var vList = document.querySelectorAll('video');" +
+            "  for (var k=0; k<vList.length; k++) {" +
+            "    var vid = vList[k];" +
             "    if (isAd) {" +
             "      vid.muted = true;" +
             "      vid.playbackRate = 16;" +
