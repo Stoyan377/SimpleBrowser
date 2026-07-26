@@ -26,8 +26,14 @@ public class ourViewClient extends WebViewClient {
     @SuppressWarnings("deprecation")
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        view.loadUrl(url);
-        return true;
+        // Return false to allow WebView to handle SPA navigations naturally
+        return false;
+    }
+
+    @Override
+    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+        // Return false to allow WebView to handle SPA navigations naturally
+        return false;
     }
 
     @Override
@@ -52,7 +58,7 @@ public class ourViewClient extends WebViewClient {
     public void onPageFinished(WebView view, String url) {
         super.onPageFinished(view, url);
 
-        // Re-inject background playback patch (in case page JS overwrote it)
+        // Re-inject background playback patch
         view.evaluateJavascript(AdBlocker.getBackgroundPlaybackScript(), null);
 
         if (adBlockEnabled) {
@@ -64,9 +70,9 @@ public class ourViewClient extends WebViewClient {
     @Override
     public void onLoadResource(WebView view, String url) {
         super.onLoadResource(view, url);
-        // For SPA pages like YouTube that don't trigger full page loads,
+        // For SPA pages like YouTube / YouTube Music that don't trigger full page loads,
         // periodically re-ensure background playback script is active
-        if (url != null && url.contains("youtube.com")) {
+        if (url != null && (url.contains("youtube.com") || url.contains("music.youtube.com"))) {
             view.evaluateJavascript(
                 "if(!window.__sbBgPlayback){" + AdBlocker.getBackgroundPlaybackScript() + "}", null);
         }

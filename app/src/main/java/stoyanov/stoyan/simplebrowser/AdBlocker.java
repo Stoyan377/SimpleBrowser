@@ -166,7 +166,7 @@ public class AdBlocker {
 
             // Global DOM ad detection (matches any element with ad-showing/ad-interrupting class or ytp-ad overlay)
             "  var isAd = false;" +
-            "  if (document.querySelector('.ad-showing, .ad-interrupting, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]')) {" +
+            "  if (document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]')) {" +
             "    isAd = true;" +
             "  }" +
 
@@ -191,7 +191,7 @@ public class AdBlocker {
             "      if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "    } else {" +
             "      if (v.playbackRate > 2) { v.playbackRate = 1; v.muted = false; }" +
-            "      if (v.paused && !v.ended && !window.__sbUserPaused && v.readyState >= 1 && v.currentTime > 0) {" +
+            "      if (v.paused && !v.ended && !window.__sbUserPaused) {" +
             "        if (window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "      }" +
             "    }" +
@@ -210,7 +210,7 @@ public class AdBlocker {
             // --- YouTube / YouTube Music Ad Skipper ---
             "function skipYTAds(){" +
             "  var isAd = false;" +
-            "  if (document.querySelector('.ad-showing, .ad-interrupting, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]')) {" +
+            "  if (document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay, [class*=\"ad-showing\"], [class*=\"ad-interrupting\"]')) {" +
             "    isAd = true;" +
             "  }" +
 
@@ -235,7 +235,7 @@ public class AdBlocker {
             "        vid.playbackRate = 1;" +
             "        vid.muted = false;" +
             "      }" +
-            "      if (vid.paused && !vid.ended && !window.__sbUserPaused && vid.readyState >= 1 && vid.currentTime > 0) {" +
+            "      if (vid.paused && !vid.ended && !window.__sbUserPaused) {" +
             "        if (window.__sbOrigPlay) window.__sbOrigPlay.call(vid).catch(function(){});" +
             "      }" +
             "    }" +
