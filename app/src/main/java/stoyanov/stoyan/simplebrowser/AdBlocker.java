@@ -82,7 +82,7 @@ public class AdBlocker {
 
     /**
      * JavaScript to bypass Page Visibility API, handle YouTube/YouTube Music ad skipping,
-     * and maintain background playback when screen is off.
+     * instant seeking on ad detection, and maintain background playback when screen is off.
      */
     public static String getBackgroundPlaybackScript() {
         return "(function() {" +
@@ -141,7 +141,7 @@ public class AdBlocker {
             "    return origPlay.apply(this, arguments);" +
             "  };" +
 
-            // 6. Safe, clean ad checking & skipping engine
+            // 6. Instant seeking & ad skipping engine
             "  window.__sbCheckAndSkipAds = function() {" +
             "    try {" +
             "      var adEl = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay');" +
@@ -157,7 +157,11 @@ public class AdBlocker {
             "      if (v) {" +
             "        if (isAd) {" +
             "          if (!v.muted) v.muted = true;" +
-            "          if (v.playbackRate < 4) v.playbackRate = 8;" +
+            "          if (v.playbackRate < 10) v.playbackRate = 16;" +
+            // Instant seeking: jump ad video to 0.1s before end to force HTML5 ended event
+            "          if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration - 0.3) {" +
+            "            v.currentTime = v.duration - 0.1;" +
+            "          }" +
             "          if (v.paused && window.__sbOrigPlay) window.__sbOrigPlay.call(v).catch(function(){});" +
             "        } else {" +
             "          if (v.playbackRate > 2) {" +
@@ -172,8 +176,8 @@ public class AdBlocker {
             "    } catch(e) {}" +
             "  };" +
 
-            // 7. Internal tick interval (500ms)
-            "  setInterval(function() { window.__sbCheckAndSkipAds(); }, 500);" +
+            // 7. Internal tick interval (300ms)
+            "  setInterval(function() { window.__sbCheckAndSkipAds(); }, 300);" +
 
             "} catch(e) {}" +
             "})()";
