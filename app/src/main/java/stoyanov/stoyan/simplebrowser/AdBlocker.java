@@ -82,7 +82,8 @@ public class AdBlocker {
 
     /**
      * JavaScript to bypass Page Visibility API, handle YouTube/YouTube Music ad skipping,
-     * instant seeking on ad detection, and maintain background playback when screen is off.
+     * instant seeking on ad detection, auto-confirm 'Still listening?' prompts,
+     * and maintain background playback when screen is off.
      */
     public static String getBackgroundPlaybackScript() {
         return "(function() {" +
@@ -141,7 +142,7 @@ public class AdBlocker {
             "    return origPlay.apply(this, arguments);" +
             "  };" +
 
-            // 6. Instant seeking & ad skipping engine
+            // 6. Instant seeking, ad skipping, and 'Still listening?' auto-confirm engine
             "  window.__sbCheckAndSkipAds = function() {" +
             "    try {" +
             "      var adEl = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-text-overlay');" +
@@ -152,6 +153,14 @@ public class AdBlocker {
             "      if (skipBtn) { try { skipBtn.click(); } catch(e){} }" +
             "      var closes = document.querySelectorAll('.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container');" +
             "      for (var j=0; j<closes.length; j++) { try { closes[j].click(); } catch(e){} }" +
+
+            // Auto-click 'Video paused. Continue watching?' and 'Are you still listening?' confirmation buttons
+            "      var confirms = document.querySelectorAll(" +
+            "        'ytd-you-there-renderer button, ytd-you-there-renderer #button, " +
+            "         ytmusic-you-there-renderer button, ytmusic-you-there-renderer .dismiss-button, " +
+            "         #confirm-button.ytd-you-there-renderer, tp-yt-paper-dialog #button'" +
+            "      );" +
+            "      for (var c=0; c<confirms.length; c++) { try { confirms[c].click(); } catch(e){} }" +
 
             "      var v = document.querySelector('video');" +
             "      if (v) {" +
