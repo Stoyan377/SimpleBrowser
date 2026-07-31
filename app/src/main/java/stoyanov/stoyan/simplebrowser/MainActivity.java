@@ -192,13 +192,25 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Select all text when URL bar is tapped for easy editing
+        // Select all text on single tap of address bar
+        urledit.setSelectAllOnFocus(true);
         urledit.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
                 if (hasFocus) {
-                    urledit.selectAll();
+                    urledit.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            urledit.selectAll();
+                        }
+                    });
                 }
+            }
+        });
+        urledit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                urledit.selectAll();
             }
         });
     }

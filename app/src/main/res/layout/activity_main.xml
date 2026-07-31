@@ -41,6 +41,7 @@
             android:inputType="textUri"
             android:maxLines="1"
             android:singleLine="true"
+            android:selectAllOnFocus="true"
             android:textColorHint="@color/url_bar_hint"
             android:textSize="14sp"
             tools:ignore="Autofill" />
