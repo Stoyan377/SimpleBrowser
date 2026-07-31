@@ -10,6 +10,7 @@ import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private ourViewClient webViewClient;
     private boolean adBlockEnabled = true;
     private boolean isServiceRunning = false;
+    private boolean isUrlBarFullySelected = false;
 
     // Handler for periodic background tick (ad skipping + force resume)
     private final Handler bgHandler = new Handler(Looper.getMainLooper());
@@ -192,8 +194,31 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Select all text on single tap of address bar
-        urledit.setSelectAllOnFocus(true);
+        // Address bar touch logic: 1st tap selects all, 2nd tap places cursor at clicked position
+        urledit.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    if (!urledit.hasFocus()) {
+                        urledit.requestFocus();
+                        urledit.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                urledit.selectAll();
+                                isUrlBarFullySelected = true;
+                            }
+                        });
+                        return true; // Consume touch event so initial tap doesn't place cursor
+                    } else if (isUrlBarFullySelected) {
+                        // 2nd tap while selected: clear selection and allow cursor placement at tapped character
+                        isUrlBarFullySelected = false;
+                        return false; 
+                    }
+                }
+                return false;
+            }
+        });
+
         urledit.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
@@ -202,15 +227,12 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             urledit.selectAll();
+                            isUrlBarFullySelected = true;
                         }
                     });
+                } else {
+                    isUrlBarFullySelected = false;
                 }
-            }
-        });
-        urledit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                urledit.selectAll();
             }
         });
     }
