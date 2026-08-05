@@ -194,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Address bar touch logic: 1st tap selects all, 2nd tap places cursor at clicked position
+        // Address bar touch logic: 1st tap selects all + shows soft keyboard, 2nd tap places cursor at clicked position
         urledit.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -206,6 +206,10 @@ public class MainActivity extends AppCompatActivity {
                             public void run() {
                                 urledit.selectAll();
                                 isUrlBarFullySelected = true;
+                                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                if (imm != null) {
+                                    imm.showSoftInput(urledit, InputMethodManager.SHOW_IMPLICIT);
+                                }
                             }
                         });
                         return true; // Consume touch event so initial tap doesn't place cursor
@@ -228,6 +232,10 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
                             urledit.selectAll();
                             isUrlBarFullySelected = true;
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) {
+                                imm.showSoftInput(urledit, InputMethodManager.SHOW_IMPLICIT);
+                            }
                         }
                     });
                 } else {
